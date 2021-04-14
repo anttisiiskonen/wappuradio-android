@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Wappuradio</string>
+    <string name="play_text">Play</string>
+    <string name="stop_text">Stop</string>
+    <string name="prepared_text">Prepared</string>
+    <string name="buffering_text">Buffering</string>
+</resources>
