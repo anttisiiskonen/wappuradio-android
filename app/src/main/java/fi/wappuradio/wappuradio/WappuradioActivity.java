@@ -35,7 +35,8 @@ public class WappuradioActivity extends AppCompatActivity {
 
     private SimpleExoPlayer exoPlayer;
 
-    private final String streamUrl = "https://stream.wappuradio.fi/wappuradio.opus";
+    private final String streamUrl =
+            "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
 
     private final ExoPlayer.EventListener eventListener = new ExoPlayer.EventListener() {
         @Override
