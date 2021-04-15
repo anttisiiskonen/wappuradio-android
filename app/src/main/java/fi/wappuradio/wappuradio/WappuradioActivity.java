@@ -2,29 +2,30 @@ package fi.wappuradio.wappuradio;
 
 import android.Manifest;
 import android.app.ActionBar;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioAttributes;
-import com.google.android.exoplayer2.audio.MediaCodecAudioRenderer;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource;
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import okhttp3.OkHttpClient;
 
@@ -40,23 +41,26 @@ public class WappuradioActivity extends AppCompatActivity {
         @Override
         public void onPlayerError(ExoPlaybackException error) {
             switch(error.type) {
+                case ExoPlaybackException.TYPE_REMOTE:
+                    Log.e(TAG, "TYPE_REMOTE exception.");
+                    break;
                 case ExoPlaybackException.TYPE_SOURCE:
                     Log.e(TAG, "TYPE_SOURCE: " +
-                        error.getSourceException().getMessage());
+                               error.getSourceException().getMessage());
                     break;
                 case ExoPlaybackException.TYPE_RENDERER:
                     Log.e(TAG, "TYPE_RENDERER: " +
-                            error.getRendererException().getMessage());
+                               error.getRendererException().getMessage());
                     break;
                 case ExoPlaybackException.TYPE_UNEXPECTED:
                     Log.e(TAG, "TYPE_UNEXPECTED: " +
-                            error.getUnexpectedException().getMessage());
+                               error.getUnexpectedException().getMessage());
                     break;
             }
 
             if (error.type == ExoPlaybackException.TYPE_SOURCE &&
-                    error.getSourceException() instanceof HttpDataSource.InvalidResponseCodeException) {
-                Toast.makeText(getApplicationContext(), "Ei pysty, sori!", Toast.LENGTH_LONG).show();
+                error.getSourceException() instanceof HttpDataSource.InvalidResponseCodeException) {
+                Toast.makeText(getApplicationContext(), R.string.unable, Toast.LENGTH_LONG).show();
             } else {
                 Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
             }
@@ -68,11 +72,9 @@ public class WappuradioActivity extends AppCompatActivity {
 
     private void play() {
         prepareExoPlayerFromURL(Uri.parse(streamUrl));
-        Button playButton = (Button)findViewById(R.id.playButton);
-        playButton.setText(R.string.buffering_text);
+        exoPlayer.setPlayWhenReady(true);
         exoPlayer.prepare();
-        playButton.setText(R.string.prepared_text);
-        exoPlayer.play();
+        Button playButton = findViewById(R.id.playButton);
         playButton.setText(R.string.stop_text);
         isPlaying = true;
     }
@@ -83,7 +85,7 @@ public class WappuradioActivity extends AppCompatActivity {
             exoPlayer.release();
             exoPlayer = null;
         }
-        Button playButton = (Button)findViewById(R.id.playButton);
+        Button playButton = findViewById(R.id.playButton);
         playButton.setText(R.string.play_text);
         isPlaying = false;
     }
@@ -99,11 +101,13 @@ public class WappuradioActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        Button playButton = (Button)findViewById(R.id.playButton);
+        Button playButton = findViewById(R.id.playButton);
         playButton.setOnClickListener(v -> {
             if (isPlaying) {
+                Log.i(TAG, "Stop clicked.");
                 stop();
             } else {
+                Log.i(TAG, "Play clicked.");
                 play();
             }
         });
@@ -152,6 +156,17 @@ public class WappuradioActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WAKE_LOCK},
                     REQUEST_CODE_WAKE_LOCK);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Intent intent = new Intent();
+            String packageName = getPackageName();
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + packageName));
+                startActivity(intent);
+            }
         }
 
     }
