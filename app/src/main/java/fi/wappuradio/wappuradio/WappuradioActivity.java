@@ -114,6 +114,17 @@ public class WappuradioActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Button playButton = findViewById(R.id.playButton);
+        if (isPlaying) {
+            playButton.setText(R.string.stop_text);
+        } else {
+            playButton.setText(R.string.play_text);
+        }
+    }
+
     private void prepareExoPlayerFromURL(Uri uri) {
         exoPlayer =
                 new SimpleExoPlayer.Builder(this)
