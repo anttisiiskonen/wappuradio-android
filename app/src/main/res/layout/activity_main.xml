@@ -40,6 +40,7 @@
 
     <TextView
         style="@style/Theme.Wappuradio"
+        android:text="@string/loading"
         android:contentDescription="Now playing"
         android:id="@+id/nowPlayingTextView"
         android:textAlignment="center"

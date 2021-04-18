@@ -214,7 +214,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 stop();
             } else {
                 Log.i(TAG, "Play clicked.");
-                playButton.setText(R.string.wait_text);
+                playButton.setText(R.string.buffering);
                 play();
             }
         });
