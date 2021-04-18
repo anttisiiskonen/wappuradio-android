@@ -1,6 +1,7 @@
 package fi.wappuradio.wappuradio;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -50,7 +51,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -61,7 +61,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private static final String TAG = "WappuradioActivity";
 
-    private SimpleExoPlayer exoPlayer;
+    private static SimpleExoPlayer exoPlayer;
 
     private final String streamUrl = "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
 
@@ -107,7 +107,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     private final int PLAYBACK_NOTIFICATION_ID = 666;
 
     private final int RETRY_DELAY_MS = 1000;
-    private static Context context;
 
     private enum WAPPURADIO_STATE {
         STOPPED,
@@ -115,7 +114,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         PLAYING
     }
 
-    private WAPPURADIO_STATE wappuradioState = WAPPURADIO_STATE.STOPPED;
+    private static WAPPURADIO_STATE wappuradioState = WAPPURADIO_STATE.STOPPED;
     private PlayerNotificationManager playerNotificationManager;
 
     private void play() {
@@ -186,10 +185,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         }
     }
 
-    public static Context getWappuradioApplicationContext() {
-        return context;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -200,8 +195,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         nowPlayingTextView = findViewById(R.id.nowPlayingTextView);
         nowPerformingTextView = findViewById(R.id.nowPerformingTextView);
         bufferingIndicator = findViewById(R.id.bufferingIndicator);
-
-        context = getApplicationContext();
 
         prepareExoPlayerFromURL(Uri.parse(streamUrl));
 
@@ -215,6 +208,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             );
 
             descriptionAdapter = new DescriptionAdapter();
+            descriptionAdapter.setContext(this);
 
             playerNotificationManager =
                     new PlayerNotificationManager(
@@ -229,6 +223,12 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playerNotificationManager.setUsePlayPauseActions(true);
             playerNotificationManager.setUseStopAction(false);
             playerNotificationManager.setPlayer(exoPlayer);
+        }
+
+        if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
+            playButton.setText(R.string.stop_text);
+        } else {
+            playButton.setText(R.string.play_text);
         }
 
         playButton.setOnClickListener(v -> {
@@ -257,8 +257,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playButton.setText(R.string.play_text);
         }
 
-
-
         nowPlayingUpdateTimer = new Timer();
         nowPlayingUpdateTimer.scheduleAtFixedRate(new TimerTask() {
             @RequiresApi(api = Build.VERSION_CODES.O)
@@ -271,38 +269,39 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     }
 
     private void prepareExoPlayerFromURL(Uri uri) {
-        exoPlayer = new SimpleExoPlayer.Builder(this)
-                .setWakeMode(C.WAKE_MODE_NETWORK)
-                .setAudioAttributes(new AudioAttributes.Builder()
-                                .setContentType(C.CONTENT_TYPE_MUSIC)
-                                .setUsage(C.USAGE_MEDIA)
-                                .build(),
-                        true
-                )
-                .setMediaSourceFactory(
-                        new DefaultMediaSourceFactory(new OkHttpDataSource.Factory(new OkHttpClient()))
-                                .setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy() {
-                                    @Override
-                                    public long getRetryDelayMsFor(LoadErrorInfo loadErrorInfo) {
-                                        return RETRY_DELAY_MS;
-                                    }
+        if (exoPlayer == null) {
+            exoPlayer = new SimpleExoPlayer.Builder(this)
+                    .setWakeMode(C.WAKE_MODE_NETWORK)
+                    .setAudioAttributes(new AudioAttributes.Builder()
+                                    .setContentType(C.CONTENT_TYPE_MUSIC)
+                                    .setUsage(C.USAGE_MEDIA)
+                                    .build(),
+                            true
+                    )
+                    .setMediaSourceFactory(
+                            new DefaultMediaSourceFactory(new OkHttpDataSource.Factory(new OkHttpClient()))
+                                    .setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy() {
+                                        @Override
+                                        public long getRetryDelayMsFor(LoadErrorInfo loadErrorInfo) {
+                                            return RETRY_DELAY_MS;
+                                        }
 
-                                    @Override
-                                    public int getMinimumLoadableRetryCount(int dataType) {
-                                        return Integer.MAX_VALUE;
-                                    }
-                                })
-                                .setLiveTargetOffsetMs(5000)
-                )
-                .build();
+                                        @Override
+                                        public int getMinimumLoadableRetryCount(int dataType) {
+                                            return Integer.MAX_VALUE;
+                                        }
+                                    })
+                                    .setLiveTargetOffsetMs(5000)
+                    )
+                    .build();
+            MediaItem mediaItem = new MediaItem.Builder()
+                    .setUri(uri)
+                    .build();
 
+            exoPlayer.setMediaItem(mediaItem);
+            exoPlayer.setPlayWhenReady(true);
+        }
         exoPlayer.addListener(this);
-        MediaItem mediaItem = new MediaItem.Builder()
-                .setUri(uri)
-                .build();
-
-        exoPlayer.setMediaItem(mediaItem);
-        exoPlayer.setPlayWhenReady(true);
     }
 
     private final int REQUEST_CODE_INTERNET = 0;
@@ -350,25 +349,19 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private void updateNowPlaying() {
         RequestQueue queue = Volley.newRequestQueue(this);
-        JsonObjectRequest getNowPlayingRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    String song = (String) response.get("song");
-                    Log.i("updateNowPlaying", song);
-                    nowPlayingTextView.setText(song);
-                    descriptionAdapter.setNowPlaying(song);
-                } catch (JSONException e) {
-                    Log.e("updateNowPlaying", e.getMessage());
-                    Toast.makeText(getApplicationContext(), "Oops: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
+        JsonObjectRequest getNowPlayingRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, response -> {
+            try {
+                String song = (String) response.get("song");
+                Log.i("updateNowPlaying", song);
+                nowPlayingTextView.setText(song);
+                descriptionAdapter.setNowPlaying(song);
+            } catch (JSONException e) {
+                Log.e("updateNowPlaying", e.getMessage());
+                Toast.makeText(getApplicationContext(), "Oops: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e("updateNowPlaying", error.getMessage());
-                Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
-            }
+        }, error -> {
+            Log.e("updateNowPlaying", error.getMessage());
+            Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
         });
         queue.add(getNowPlayingRequest);
     }
@@ -396,12 +389,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                     e.printStackTrace();
                 }
             }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e("getPrograms", error.getMessage());
-                Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
-            }
+        }, error -> {
+            Log.e("getPrograms", error.getMessage());
+            Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
         });
         queue.add(getProgramsRequest);
     }
@@ -413,12 +403,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         if (currentProgram != null) {
             descriptionAdapter.setNowPerforming(currentProgram.getTitle());
 
-            this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    nowPerformingTextView.setText(currentProgram.getTitle());
-                }
-            });
+            this.runOnUiThread(() -> nowPerformingTextView.setText(currentProgram.getTitle()));
         }
     }
 

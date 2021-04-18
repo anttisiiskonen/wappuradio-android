@@ -1,6 +1,7 @@
 package fi.wappuradio.wappuradio;
 
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +14,8 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 
 public class DescriptionAdapter implements PlayerNotificationManager.MediaDescriptionAdapter {
 
+    private Context context;
+
     private String nowPerforming;
     private String nowPlaying;
 
@@ -22,6 +25,14 @@ public class DescriptionAdapter implements PlayerNotificationManager.MediaDescri
 
     public void setNowPlaying(String playing) {
         nowPlaying = playing;
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    public void setContext(Context context) {
+        this.context = context;
     }
 
     @NonNull
@@ -41,7 +52,7 @@ public class DescriptionAdapter implements PlayerNotificationManager.MediaDescri
     public Bitmap getCurrentLargeIcon(@NonNull Player player,
                                       @NonNull PlayerNotificationManager.BitmapCallback callback) {
         return BitmapFactory.decodeResource(
-                WappuradioActivity.getWappuradioApplicationContext().getResources(),
+                context.getResources(),
                 R.drawable.tower);
     }
 
@@ -49,10 +60,10 @@ public class DescriptionAdapter implements PlayerNotificationManager.MediaDescri
     @Override
     public PendingIntent createCurrentContentIntent(@NonNull Player player) {
         Intent intent = new Intent(
-                WappuradioActivity.getWappuradioApplicationContext(),
+                context,
                 WappuradioActivity.class);
         return PendingIntent.getActivity
-                (WappuradioActivity.getWappuradioApplicationContext(), 0, intent, 0);
+                (context, 0, intent, 0);
     }
 
 }
