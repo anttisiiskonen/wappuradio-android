@@ -52,13 +52,16 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private SimpleExoPlayer exoPlayer;
 
-    private final String streamUrl =
-            "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
-
+    private final String streamUrl = "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
 
     private final String nowPlayingApiUrl = "https://www.wappuradio.fi/api/nowplaying";
 
     private Timer nowPlayingUpdateTimer;
+
+    private Button playButton;
+    private TextView nowPlayingTextView;
+
+    private DescriptionAdapter descriptionAdapter;
 
     private final ExoPlayer.EventListener eventListener = new ExoPlayer.EventListener() {
         @Override
@@ -185,12 +188,14 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                     NotificationUtil.IMPORTANCE_LOW
             );
 
+            descriptionAdapter = new DescriptionAdapter();
+
             playerNotificationManager =
                     new PlayerNotificationManager(
                             this,
                             PLAYBACK_CHANNEL_ID,
                             PLAYBACK_NOTIFICATION_ID,
-                            new DescriptionAdapter());
+                            descriptionAdapter);
 
             playerNotificationManager.setColorized(true);
             playerNotificationManager.setColor(R.color.red);
@@ -202,7 +207,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
         setContentView(R.layout.activity_main);
 
-        Button playButton = findViewById(R.id.playButton);
+        playButton = findViewById(R.id.playButton);
         playButton.setOnClickListener(v -> {
             if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
                 Log.i(TAG, "Stop clicked.");
@@ -214,12 +219,13 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             }
         });
         nowPlayingUpdateTimer = new Timer();
+
+        nowPlayingTextView = findViewById(R.id.nowPlayingTextView);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Button playButton = findViewById(R.id.playButton);
         if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
             playButton.setText(R.string.stop_text);
         } else {
@@ -310,7 +316,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private void updateNowPlaying() {
         RequestQueue queue = Volley.newRequestQueue(this);
-        TextView nowPlayingView = findViewById(R.id.nowPlayingTextView);
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -319,7 +324,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 try {
                     String song = (String) response.get("song");
                     Log.i("updateNowPlaying", song);
-                    nowPlayingView.setText(song);
+                    nowPlayingTextView.setText(song);
+                    descriptionAdapter.setNowPlaying(song);
+
                 } catch (JSONException e) {
                     Log.e("updateNowPlaying", e.getMessage());
                     Toast.makeText(getApplicationContext(), "Oops: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -332,8 +339,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
-
         queue.add(jsonObjectRequest);
     }
-
 }

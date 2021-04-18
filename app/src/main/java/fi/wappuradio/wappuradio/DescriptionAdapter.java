@@ -9,18 +9,28 @@ import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 
-public class DescriptionAdapter implements
-        PlayerNotificationManager.MediaDescriptionAdapter {
+public class DescriptionAdapter implements PlayerNotificationManager.MediaDescriptionAdapter {
+
+    private String nowPerforming;
+    private String nowPlaying;
+
+    public void setNowPerforming(String performing) {
+        nowPerforming = performing;
+    }
+
+    public void setNowPlaying(String playing) {
+        nowPlaying = playing;
+    }
 
     @Override
     public String getCurrentContentTitle(Player player) {
-        return null;
+        return nowPerforming;
     }
 
     @Nullable
     @Override
     public String getCurrentContentText(Player player) {
-        return null;
+        return nowPlaying;
     }
 
     @Nullable
