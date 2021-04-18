@@ -67,6 +67,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private final String nowPlayingApiUrl = "https://www.wappuradio.fi/api/nowplaying";
     private final String programsApiUrl ="https://www.wappuradio.fi/api/programs";
+    private final int pollingRateMilliseconds = 60000;
 
     private List<WappuradioProgram> programs;
 
@@ -230,7 +231,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playerNotificationManager.setPlayer(exoPlayer);
         }
 
-
         playButton.setOnClickListener(v -> {
             if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
                 Log.i(TAG, "Stop clicked.");
@@ -243,8 +243,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 play();
             }
         });
-        nowPlayingUpdateTimer = new Timer();
+
         programs = new ArrayList<>();
+        updatePrograms();
     }
 
     @Override
@@ -256,8 +257,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playButton.setText(R.string.play_text);
         }
 
-        updatePrograms();
 
+
+        nowPlayingUpdateTimer = new Timer();
         nowPlayingUpdateTimer.scheduleAtFixedRate(new TimerTask() {
             @RequiresApi(api = Build.VERSION_CODES.O)
             @Override
@@ -265,7 +267,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 updateNowPlaying();
                 updateNowPerforming();
             }
-        }, 0, 5000);
+        }, 0, pollingRateMilliseconds);
     }
 
     private void prepareExoPlayerFromURL(Uri uri) {
@@ -336,6 +338,16 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(nowPlayingUpdateTimer != null) {
+            nowPlayingUpdateTimer.cancel();
+            nowPlayingUpdateTimer.purge();
+            nowPlayingUpdateTimer = null;
+        }
+    }
+
     private void updateNowPlaying() {
         RequestQueue queue = Volley.newRequestQueue(this);
         JsonObjectRequest getNowPlayingRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, new Response.Listener<JSONObject>() {
@@ -377,6 +389,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                         String title = object.getString("title");
                         programs.add(new WappuradioProgram(startTime, endTime, title));
                     }
+                    updateNowPerforming();
                     Log.i("getPrograms", "Programs fetched successfully");
                 } catch (JSONException e) {
                     Log.e("getPrograms", "Unable to fetch programs: " + e.getMessage());
