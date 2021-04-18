@@ -25,6 +25,7 @@ import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource;
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
+import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.NotificationUtil;
 
@@ -41,6 +42,8 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private final String PLAYBACK_CHANNEL_ID = "fi.wappuradio.wappuradio.playback_channel";
     private final int PLAYBACK_NOTIFICATION_ID = 666;
+
+    private final int RETRY_DELAY_MS = 1000;
 
     private enum WAPPURADIO_STATE {
         STOPPED,
@@ -115,7 +118,6 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         } else {
             Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
         }
-        stop();
     }
 
     @Override
@@ -187,6 +189,17 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                         )
                         .setMediaSourceFactory(
                                 new DefaultMediaSourceFactory(new OkHttpDataSource.Factory(new OkHttpClient()))
+                                        .setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy() {
+                                            @Override
+                                            public long getRetryDelayMsFor(LoadErrorInfo loadErrorInfo) {
+                                                return RETRY_DELAY_MS;
+                                            }
+
+                                            @Override
+                                            public int getMinimumLoadableRetryCount(int dataType) {
+                                                return Integer.MAX_VALUE;
+                                            }
+                                        })
                                         .setLiveTargetOffsetMs(5000)
                         )
                         .build();
