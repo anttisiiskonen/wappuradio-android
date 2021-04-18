@@ -1,6 +1,7 @@
 package fi.wappuradio.wappuradio;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -44,6 +45,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     private final int PLAYBACK_NOTIFICATION_ID = 666;
 
     private final int RETRY_DELAY_MS = 1000;
+    private static Context context;
 
     private enum WAPPURADIO_STATE {
         STOPPED,
@@ -120,9 +122,15 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
         }
     }
 
+    public static Context getWappuradioApplicationContext() {
+        return context;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        context = getApplicationContext();
 
         prepareExoPlayerFromURL(Uri.parse(streamUrl));
 
@@ -140,7 +148,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                             this,
                             PLAYBACK_CHANNEL_ID,
                             PLAYBACK_NOTIFICATION_ID,
-                            new DescriptionAdapter(this));
+                            new DescriptionAdapter());
 
             playerNotificationManager.setColorized(true);
             playerNotificationManager.setColor(R.color.red);
