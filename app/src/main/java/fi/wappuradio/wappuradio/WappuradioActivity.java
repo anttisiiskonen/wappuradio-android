@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,6 +40,7 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.NotificationUtil;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -73,6 +75,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     private Button playButton;
     private TextView nowPlayingTextView;
     private TextView nowPerformingTextView;
+    private CircularProgressIndicator bufferingIndicator;
 
     private DescriptionAdapter descriptionAdapter;
 
@@ -130,10 +133,11 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     @Override
     public void onIsPlayingChanged(boolean isPlaying) {
-        Button playButton = findViewById(R.id.playButton);
         if (isPlaying) {
             Log.i(TAG, "onIsPlayingChanged to true");
             playButton.setText(R.string.stop_text);
+            bufferingIndicator.setVisibility(View.INVISIBLE);
+            playButton.setVisibility(View.VISIBLE);
             wappuradioState = WAPPURADIO_STATE.PLAYING;
             Log.i(TAG, "Set state to PLAYING");
         } else {
@@ -149,6 +153,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 Log.i(TAG, "Set state to STOPPED");
             }
             playButton.setText(R.string.play_text);
+            playButton.setVisibility(View.VISIBLE);
         }
     }
 
@@ -188,6 +193,13 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setContentView(R.layout.activity_main);
+
+        playButton = findViewById(R.id.playButton);
+        nowPlayingTextView = findViewById(R.id.nowPlayingTextView);
+        nowPerformingTextView = findViewById(R.id.nowPerformingTextView);
+        bufferingIndicator = findViewById(R.id.bufferingIndicator);
+
         context = getApplicationContext();
 
         prepareExoPlayerFromURL(Uri.parse(streamUrl));
@@ -218,9 +230,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playerNotificationManager.setPlayer(exoPlayer);
         }
 
-        setContentView(R.layout.activity_main);
 
-        playButton = findViewById(R.id.playButton);
         playButton.setOnClickListener(v -> {
             if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
                 Log.i(TAG, "Stop clicked.");
@@ -228,14 +238,12 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             } else {
                 Log.i(TAG, "Play clicked.");
                 playButton.setText(R.string.buffering);
+                playButton.setVisibility(View.INVISIBLE);
+                bufferingIndicator.setVisibility(View.VISIBLE);
                 play();
             }
         });
         nowPlayingUpdateTimer = new Timer();
-
-        nowPlayingTextView = findViewById(R.id.nowPlayingTextView);
-        nowPerformingTextView = findViewById(R.id.nowPerformingTextView);
-
         programs = new ArrayList<>();
     }
 

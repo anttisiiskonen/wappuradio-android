@@ -11,17 +11,19 @@
     <ImageView
         android:id="@+id/logoImageView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="32dp"
         android:contentDescription="Wappuradio logo"
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
-        android:src="@drawable/wappuradio2"
+        android:src="@drawable/wappuradio"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         style="@style/Theme.Wappuradio"
+        android:textStyle="bold"
         android:text="@string/loading"
         android:contentDescription="Now performing"
         android:id="@+id/nowPerformingTextView"
@@ -46,16 +48,30 @@
 
     <Button
         android:id="@+id/playButton"
-        android:layout_width="wrap_content"
+        android:layout_width="144dp"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/white"
         android:shadowDx="15"
         android:shadowDy="15"
         android:text="@string/play_text"
         android:textColor="@color/red"
+        android:layout_margin="48dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/nowPlayingTextView" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/bufferingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:layout_constraintStart_toStartOf="@id/playButton"
+        app:layout_constraintEnd_toEndOf="@id/playButton"
+        app:layout_constraintTop_toTopOf="@id/playButton"
+        app:layout_constraintBottom_toBottomOf="@id/playButton"
+        android:visibility="invisible"
+        app:indicatorColor="@color/white"
+        />
 
 
 
