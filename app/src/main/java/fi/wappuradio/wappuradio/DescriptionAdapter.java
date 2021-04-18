@@ -12,12 +12,6 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 public class DescriptionAdapter implements
         PlayerNotificationManager.MediaDescriptionAdapter {
 
-    private final WappuradioActivity wappuradioActivity;
-
-    public DescriptionAdapter(WappuradioActivity wappuradioActivity) {
-        this.wappuradioActivity = wappuradioActivity;
-    }
-
     @Override
     public String getCurrentContentTitle(Player player) {
         return null;
@@ -34,7 +28,7 @@ public class DescriptionAdapter implements
     public Bitmap getCurrentLargeIcon(Player player,
                                       PlayerNotificationManager.BitmapCallback callback) {
         return BitmapFactory.decodeResource(
-                wappuradioActivity.getResources(),
+                WappuradioActivity.getWappuradioApplicationContext().getResources(),
                 R.drawable.tower);
     }
 
