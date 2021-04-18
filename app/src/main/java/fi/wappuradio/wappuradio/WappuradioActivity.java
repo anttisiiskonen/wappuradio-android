@@ -44,6 +44,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private enum WAPPURADIO_STATE {
         STOPPED,
+        PAUSED,
         PLAYING
     }
 
@@ -51,7 +52,11 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     private PlayerNotificationManager playerNotificationManager;
 
     private void play() {
-        exoPlayer.prepare();
+        if (wappuradioState == WAPPURADIO_STATE.PAUSED) {
+            exoPlayer.play();
+        } else {
+            exoPlayer.prepare();
+        }
     }
 
     private void stop() {
@@ -62,22 +67,25 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     @Override
     public void onIsPlayingChanged(boolean isPlaying) {
+        Button playButton = findViewById(R.id.playButton);
         if (isPlaying) {
             Log.i(TAG, "onIsPlayingChanged to true");
-            Button playButton = findViewById(R.id.playButton);
             playButton.setText(R.string.stop_text);
             wappuradioState = WAPPURADIO_STATE.PLAYING;
+            Log.i(TAG, "Set state to PLAYING");
         } else {
             Log.i(TAG, "onIsPlayingChanged to false");
             if (exoPlayer.getPlaybackState() == Player.STATE_READY) {
                 /* Player is not playing, but reports STATE_READY,
                  *  so we interpret the player being paused via notification
-                 *  controls. We don't want that, so we call stop(). */
-                exoPlayer.stop();
+                 *  controls. */
+                wappuradioState = WAPPURADIO_STATE.PAUSED;
+                Log.i(TAG, "Set state to PAUSED");
+            } else {
+                wappuradioState = WAPPURADIO_STATE.STOPPED;
+                Log.i(TAG, "Set state to STOPPED");
             }
-            Button playButton = findViewById(R.id.playButton);
             playButton.setText(R.string.play_text);
-            wappuradioState = WAPPURADIO_STATE.STOPPED;
         }
     }
 
