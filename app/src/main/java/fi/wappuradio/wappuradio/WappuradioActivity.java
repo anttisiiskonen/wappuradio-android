@@ -11,14 +11,22 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -30,6 +38,12 @@ import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.google.android.exoplayer2.util.NotificationUtil;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Timer;
+import java.util.TimerTask;
+
 import okhttp3.OkHttpClient;
 
 public class WappuradioActivity extends AppCompatActivity implements Player.EventListener {
@@ -38,8 +52,39 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     private SimpleExoPlayer exoPlayer;
 
-    private final String streamUrl =
-            "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
+    private final String streamUrl = "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
+
+    private final String nowPlayingApiUrl = "https://www.wappuradio.fi/api/nowplaying";
+
+    private Timer nowPlayingUpdateTimer;
+
+    private Button playButton;
+    private TextView nowPlayingTextView;
+
+    private DescriptionAdapter descriptionAdapter;
+
+    private final ExoPlayer.EventListener eventListener = new ExoPlayer.EventListener() {
+        @Override
+        public void onPlayerError(ExoPlaybackException error) {
+            switch (error.type) {
+                case ExoPlaybackException.TYPE_REMOTE:
+                    Log.e(TAG, "TYPE_REMOTE exception.");
+                    break;
+                case ExoPlaybackException.TYPE_SOURCE:
+                    Log.e(TAG, "TYPE_SOURCE: " +
+                            error.getSourceException().getMessage());
+                    break;
+                case ExoPlaybackException.TYPE_RENDERER:
+                    Log.e(TAG, "TYPE_RENDERER: " +
+                            error.getRendererException().getMessage());
+                    break;
+                case ExoPlaybackException.TYPE_UNEXPECTED:
+                    Log.e(TAG, "TYPE_UNEXPECTED: " +
+                            error.getUnexpectedException().getMessage());
+                    break;
+            }
+        }
+    };
 
     private final String PLAYBACK_CHANNEL_ID = "fi.wappuradio.wappuradio.playback_channel";
     private final int PLAYBACK_NOTIFICATION_ID = 666;
@@ -143,12 +188,14 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                     NotificationUtil.IMPORTANCE_LOW
             );
 
+            descriptionAdapter = new DescriptionAdapter();
+
             playerNotificationManager =
                     new PlayerNotificationManager(
                             this,
                             PLAYBACK_CHANNEL_ID,
                             PLAYBACK_NOTIFICATION_ID,
-                            new DescriptionAdapter());
+                            descriptionAdapter);
 
             playerNotificationManager.setColorized(true);
             playerNotificationManager.setColor(R.color.red);
@@ -160,7 +207,7 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
         setContentView(R.layout.activity_main);
 
-        Button playButton = findViewById(R.id.playButton);
+        playButton = findViewById(R.id.playButton);
         playButton.setOnClickListener(v -> {
             if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
                 Log.i(TAG, "Stop clicked.");
@@ -171,17 +218,31 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 play();
             }
         });
+        nowPlayingUpdateTimer = new Timer();
+
+        nowPlayingTextView = findViewById(R.id.nowPlayingTextView);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Button playButton = findViewById(R.id.playButton);
         if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
             playButton.setText(R.string.stop_text);
         } else {
             playButton.setText(R.string.play_text);
         }
+        nowPlayingUpdateTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                updateNowPlaying();
+            }
+        }, 0, 5000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        nowPlayingUpdateTimer.cancel();
     }
 
     private void prepareExoPlayerFromURL(Uri uri) {
@@ -253,4 +314,31 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
     }
 
+    private void updateNowPlaying() {
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                Log.i("updateNowPlaying", "updating...");
+                try {
+                    String song = (String) response.get("song");
+                    Log.i("updateNowPlaying", song);
+                    nowPlayingTextView.setText(song);
+                    descriptionAdapter.setNowPlaying(song);
+
+                } catch (JSONException e) {
+                    Log.e("updateNowPlaying", e.getMessage());
+                    Toast.makeText(getApplicationContext(), "Oops: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("updateNowPlaying", error.getMessage());
+                Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+        queue.add(jsonObjectRequest);
+    }
 }
