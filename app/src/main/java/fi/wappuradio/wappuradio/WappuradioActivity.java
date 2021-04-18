@@ -11,12 +11,19 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -26,6 +33,12 @@ import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource;
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.upstream.HttpDataSource;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 import okhttp3.OkHttpClient;
 
@@ -37,6 +50,10 @@ public class WappuradioActivity extends AppCompatActivity {
 
     private final String streamUrl =
             "http://stream.wappuradio.fi/icecast/wappuradio-legacy-streamer1.opus";
+
+    private final String nowPlayingApiUrl = "https://www.wappuradio.fi/api/nowplaying";
+
+    private Timer nowPlayingUpdateTimer;
 
     private final ExoPlayer.EventListener eventListener = new ExoPlayer.EventListener() {
         @Override
@@ -112,6 +129,7 @@ public class WappuradioActivity extends AppCompatActivity {
                 play();
             }
         });
+        nowPlayingUpdateTimer = new Timer();
     }
 
     @Override
@@ -123,6 +141,18 @@ public class WappuradioActivity extends AppCompatActivity {
         } else {
             playButton.setText(R.string.play_text);
         }
+        nowPlayingUpdateTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                updateNowPlaying();
+            }
+        }, 0, 5000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        nowPlayingUpdateTimer.cancel();
     }
 
     private void prepareExoPlayerFromURL(Uri uri) {
@@ -181,5 +211,33 @@ public class WappuradioActivity extends AppCompatActivity {
             }
         }
 
+    }
+
+    private void updateNowPlaying() {
+        RequestQueue queue = Volley.newRequestQueue(this);
+        TextView nowPlayingView = findViewById(R.id.nowPlayingTextView);
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, nowPlayingApiUrl, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                Log.i("updateNowPlaying", "updating...");
+                try {
+                    String song = (String) response.get("song");
+                    Log.i("updateNowPlaying", song);
+                    nowPlayingView.setText(song);
+                } catch (JSONException e) {
+                    Log.e("updateNowPlaying", e.getMessage());
+                    Toast.makeText(getApplicationContext(), "Oops: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("updateNowPlaying", error.getMessage());
+                Toast.makeText(getApplicationContext(), "Oops: " + error.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+
+        queue.add(jsonObjectRequest);
     }
 }
