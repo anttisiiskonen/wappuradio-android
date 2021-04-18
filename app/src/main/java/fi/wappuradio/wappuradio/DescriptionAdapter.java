@@ -1,9 +1,11 @@
 package fi.wappuradio.wappuradio;
 
 import android.app.PendingIntent;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.exoplayer2.Player;
@@ -22,21 +24,22 @@ public class DescriptionAdapter implements PlayerNotificationManager.MediaDescri
         nowPlaying = playing;
     }
 
+    @NonNull
     @Override
-    public String getCurrentContentTitle(Player player) {
+    public String getCurrentContentTitle(@NonNull Player player) {
         return nowPerforming;
     }
 
     @Nullable
     @Override
-    public String getCurrentContentText(Player player) {
+    public String getCurrentContentText(@NonNull Player player) {
         return nowPlaying;
     }
 
     @Nullable
     @Override
-    public Bitmap getCurrentLargeIcon(Player player,
-                                      PlayerNotificationManager.BitmapCallback callback) {
+    public Bitmap getCurrentLargeIcon(@NonNull Player player,
+                                      @NonNull PlayerNotificationManager.BitmapCallback callback) {
         return BitmapFactory.decodeResource(
                 WappuradioActivity.getWappuradioApplicationContext().getResources(),
                 R.drawable.tower);
@@ -44,8 +47,12 @@ public class DescriptionAdapter implements PlayerNotificationManager.MediaDescri
 
     @Nullable
     @Override
-    public PendingIntent createCurrentContentIntent(Player player) {
-        return null;
+    public PendingIntent createCurrentContentIntent(@NonNull Player player) {
+        Intent intent = new Intent(
+                WappuradioActivity.getWappuradioApplicationContext(),
+                WappuradioActivity.class);
+        return PendingIntent.getActivity
+                (WappuradioActivity.getWappuradioApplicationContext(), 0, intent, 0);
     }
 
 }
