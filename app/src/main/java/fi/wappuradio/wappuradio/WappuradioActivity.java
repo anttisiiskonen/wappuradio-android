@@ -1,8 +1,6 @@
 package fi.wappuradio.wappuradio;
 
 import android.Manifest;
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -10,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -24,7 +23,6 @@ import androidx.core.content.ContextCompat;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
@@ -35,6 +33,7 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioAttributes;
+import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSource;
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
@@ -107,6 +106,8 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
     private final int PLAYBACK_NOTIFICATION_ID = 666;
 
     private final int RETRY_DELAY_MS = 1000;
+    private MediaSessionCompat mediaSession;
+    private MediaSessionConnector mediaSessionConnector;
 
     private enum WAPPURADIO_STATE {
         STOPPED,
@@ -198,6 +199,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
 
         prepareExoPlayerFromURL(Uri.parse(streamUrl));
 
+        mediaSession = new MediaSessionCompat(this, getPackageName());
+        mediaSessionConnector = new MediaSessionConnector(mediaSession);
+
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationUtil.createNotificationChannel(
                     this,
@@ -222,7 +226,15 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             playerNotificationManager.setUseChronometer(false);
             playerNotificationManager.setUsePlayPauseActions(true);
             playerNotificationManager.setUseStopAction(false);
+
+            playerNotificationManager.setUseNextAction(false);
+            playerNotificationManager.setUsePreviousAction(false);
+
+            playerNotificationManager.setUseNextActionInCompactView(false);
+            playerNotificationManager.setUsePreviousActionInCompactView(false);
+
             playerNotificationManager.setPlayer(exoPlayer);
+            playerNotificationManager.setMediaSessionToken(mediaSession.getSessionToken());
         }
 
         if (wappuradioState == WAPPURADIO_STATE.PLAYING) {
@@ -266,6 +278,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
                 updateNowPerforming();
             }
         }, 0, pollingRateMilliseconds);
+
+        mediaSessionConnector.setPlayer(exoPlayer);
+        mediaSession.setActive(true);
     }
 
     private void prepareExoPlayerFromURL(Uri uri) {
@@ -345,6 +360,9 @@ public class WappuradioActivity extends AppCompatActivity implements Player.Even
             nowPlayingUpdateTimer.purge();
             nowPlayingUpdateTimer = null;
         }
+
+        mediaSessionConnector.setPlayer(null);
+        mediaSession.setActive(false);
     }
 
     private void updateNowPlaying() {
