@@ -2,5 +2,9 @@
     <string name="app_name">Wappuradio</string>
     <string name="play_text">Play</string>
     <string name="stop_text">Stop</string>
+    <string name="wait_text">Wait</string>
     <string name="unable">Ei pysty, sori!</string>
+    <string name="notification_channel_name">Notification channel name</string>
+    <string name="notification_channel_description">Notification channel description</string>
+    <string name="rakkauden_wappuradio">Rakkauden Wappuradio</string>
 </resources>
